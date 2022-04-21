@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "s-transactions/pkg/pb";
+
+
+message OrderDto {
+    string id = 1;
+    string userId = 2;
+    string noInv = 3;
+    bool status = 4;
+    repeated OrderDetailDto orderDetail = 5;
+}
+
+message OrderDetailDto {
+    string productId = 1;
+    int64 qty = 2;
+}
+
+message OrderDtoList {
+    repeated OrderDto list = 1;
+}
+
+message OrderReqDto {
+    repeated OrderDetailDto order = 1;
+}
+
+
+service OrderApi {
+    rpc Create(OrderReqDto) returns (OrderDto) {}
+    rpc GetOrderByID(google.protobuf.StringValue) returns (OrderDto) {}
+    rpc ListOrderByUserID(google.protobuf.StringValue) returns (OrderDtoList) {}
+}

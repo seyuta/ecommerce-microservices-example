@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "s-catalog/pkg/pb";
+
+
+message ProductDto {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    int64 price = 4;
+    int64 stock = 5;
+    bool status = 6;
+}
+
+message ProductDtoList {
+    repeated ProductDto list = 1;
+}
+
+
+service ProductApi {
+    rpc Create(ProductDto) returns (ProductDto) {}
+    rpc GetProductByID(google.protobuf.StringValue) returns (ProductDto) {}
+    rpc ListProduct(google.protobuf.Empty) returns (ProductDtoList) {}
+}

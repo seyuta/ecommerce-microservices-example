@@ -1,0 +1,9 @@
+.build
+.history
+.git
+.gitignore
+.gitmodules
+scripts/
+data/
+Makefile
+README.md

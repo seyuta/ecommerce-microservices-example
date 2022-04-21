@@ -1,0 +1,16 @@
+app:
+  service:
+      path: "./s-transactions"
+  grpc:
+    host: 0.0.0.0
+    port: 7072
+  mongodb:
+    uri: mongodb://example:123@dbtwo:27019
+    database: ecommerce-microservices-example
+    timeoutinsecond: 64
+  jwt:
+    issuer: issuer
+    sign-key: A123
+    expires-seconds: 10800
+  log:
+    path: ./log/

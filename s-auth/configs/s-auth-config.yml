@@ -1,0 +1,16 @@
+app:
+  service:
+      path: "./s-auth"
+  grpc:
+    host: 0.0.0.0
+    port: 7070
+  mongodb:
+    uri: mongodb://example:123@dbone:27018
+    database: ecommerce-microservices-example
+    timeoutinsecond: 64
+  jwt:
+    issuer: issuer
+    sign-key: A123
+    expires-seconds: 10800
+  log:
+    path: ./log/

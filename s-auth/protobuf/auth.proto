@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "s-auth/pkg/pb";
+
+
+message LoginDto {
+    string username = 1;
+    string password = 2;
+    string deviceId = 3;
+}
+
+message RegisterDto {
+    string username = 2;
+    string email = 3;
+    string phone = 4;
+    string password = 5;
+}
+
+message AccessTokenDto {
+    string accessToken = 1;
+    int64 expiresIn = 2;
+    string scope = 3;
+    string tokenType = 4;
+    string username = 5;
+    string email = 6;
+    string phone = 7;
+}
+
+message UserAuthDto {
+    string id = 1;
+    string username = 2;
+    string email = 3;
+    string phone = 4;
+    string password = 5;
+}
+
+message UserAuthResDto {
+    string username = 1;
+    string email = 2;
+    string phone = 3;
+    string status = 5;
+}
+
+service AuthApi {
+    rpc Login(LoginDto) returns (AccessTokenDto) {}
+    rpc Register(RegisterDto) returns (UserAuthResDto) {}
+}

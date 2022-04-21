@@ -1,0 +1,58 @@
+version: '3.7'
+services:
+  dbone:
+    image: mongo:4.0.16-xenial
+    container_name: dbone
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=example
+      - MONGO_INITDB_ROOT_PASSWORD=123
+      - MONGO_INITDB_DATABASE=ecommerce-microservices-example
+    command: mongod --port 27018
+    ports:
+      - 27018:27018
+    volumes:
+      - ./mongodb-init.js:/docker-entrypoint-initdb.d/*.js:ro
+      - ./data/dbone:/data/db
+  dbtwo:
+    image: mongo:4.0.16-xenial
+    container_name: dbtwo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=example
+      - MONGO_INITDB_ROOT_PASSWORD=123
+      - MONGO_INITDB_DATABASE=ecommerce-microservices-example
+    command: mongod --port 27019
+    ports:
+      - 27019:27019
+    volumes:
+      - ./mongodb-init.js:/docker-entrypoint-initdb.d/*.js:ro
+      - ./data/dbtwo:/data/db
+  s-auth:
+    image: s-auth:latest
+    container_name: s-auth
+    restart: on-failure
+    ports:
+      - 7070:7070
+    volumes:
+      - ./data/s-auth/log:/s-auth/log
+    depends_on:
+      - 'dbone'
+  s-catalog:
+    image: s-catalog:latest
+    container_name: s-catalog
+    restart: on-failure
+    ports:
+      - 7071:7071
+    volumes:
+      - ./data/s-catalog/log:/s-catalog/log
+    depends_on:
+      - 'dbone'
+  s-transactions:
+    image: s-transactions:latest
+    container_name: s-transactions
+    restart: on-failure
+    ports:
+      - 7072:7072
+    volumes:
+      - ./data/s-transactions/log:/s-transactions/log
+    depends_on:
+      - 'dbtwo'
