@@ -41,7 +41,7 @@ func (s *OrderSvc) Create(ctx context.Context, ord *pb.OrderReqDto) (*pb.OrderDt
 
 	/*
 		Generate invoice number
-		omat => INV/currentTime/randomNumber
+		format => INV/currentTime/randomNumber
 		INV = invoice
 		randomNumber from 1000 to 9999
 	*/

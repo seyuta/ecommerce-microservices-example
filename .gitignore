@@ -18,6 +18,7 @@
 
 data/
 .history/
+.vscode/
 .build/
 build/
 tmp/

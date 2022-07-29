@@ -10,113 +10,197 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/crypto/bcrypt"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserRepositoryMock struct {
 	mock.Mock
 }
 
-func (r UserRepositoryMock) Create(context.Context, *model.UserAuth) (model.UserAuth, error) {
-	args := r.Called()
-	users := model.UserAuth{
-		Username: "test2",
-		Email:    "test2@test.com",
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) Create(ctx context.Context, req *model.UserAuth) (model.UserAuth, error) {
+	args := r.Called(ctx, req)
+	return args.Get(0).(model.UserAuth), args.Error(1)
 }
 
-func (r UserRepositoryMock) CreateToken(context.Context, *model.UserToken) (model.UserToken, error) {
-	args := r.Called()
-	users := model.UserToken{
-		Username: "test",
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) CreateToken(ctx context.Context, req *model.UserToken) (model.UserToken, error) {
+	args := r.Called(ctx, req)
+	return args.Get(0).(model.UserToken), args.Error(1)
 }
 
-func (r UserRepositoryMock) DeleteTokenByUserAndDevice(context.Context, string, string) (bool, error) {
-	args := r.Called()
+func (r *UserRepositoryMock) DeleteTokenByUserAndDevice(ctx context.Context, username, deviceId string) (bool, error) {
+	args := r.Called(ctx, username, deviceId)
 	return args.Bool(0), args.Error(1)
 }
 
-func (r UserRepositoryMock) FindTokenByUserAndDevice(context.Context, string, string) (model.UserToken, error) {
-	args := r.Called()
-	ex := time.Now().Add(time.Hour * time.Duration(10))
-	users := model.UserToken{
-		Token:     "token",
-		ExpiredDt: &ex,
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) FindTokenByUserAndDevice(ctx context.Context, username, deviceId string) (model.UserToken, error) {
+	args := r.Called(ctx, username, deviceId)
+	return args.Get(0).(model.UserToken), args.Error(1)
 }
 
-func (r UserRepositoryMock) FindByPhone(context.Context, string) (model.UserAuth, error) {
-	args := r.Called()
-	users := model.UserAuth{
-		Username: "test",
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) FindByPhone(ctx context.Context, mobile string) (model.UserAuth, error) {
+	args := r.Called(ctx, mobile)
+	return args.Get(0).(model.UserAuth), args.Error(1)
 }
 
-func (r UserRepositoryMock) FindByEmail(context.Context, string) (model.UserAuth, error) {
-	args := r.Called()
-	users := model.UserAuth{
-		Email: "test@test.com",
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) FindByEmail(ctx context.Context, email string) (model.UserAuth, error) {
+	args := r.Called(ctx, email)
+	return args.Get(0).(model.UserAuth), args.Error(1)
 }
 
-func (r UserRepositoryMock) FindByUsername(context.Context, string) (model.UserAuth, error) {
-	args := r.Called()
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123"), bcrypt.DefaultCost)
-	users := model.UserAuth{
-		Username: "test",
-		Password: string(hashedPassword),
-		Status:   model.UserStatusActive,
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) FindByUsername(ctx context.Context, username string) (model.UserAuth, error) {
+	args := r.Called(ctx, username)
+	return args.Get(0).(model.UserAuth), args.Error(1)
 }
 
-func (r UserRepositoryMock) FindByID(context.Context, string) (model.UserAuth, error) {
-	args := r.Called()
-	users := model.UserAuth{
-		Username: "test",
-	}
-	return users, args.Error(1)
+func (r *UserRepositoryMock) FindByID(ctx context.Context, id string) (model.UserAuth, error) {
+	args := r.Called(ctx, id)
+	return args.Get(0).(model.UserAuth), args.Error(1)
+}
+
+var (
+	// mock
+	userRepoMock = UserRepositoryMock{}
+
+	// service
+	userService = NewAuthSvc(&userRepoMock, logrus.StandardLogger())
+
+	// context
+	ctx = context.Background()
+)
+
+func TestService_Register(t *testing.T) {
+	t.Run("Scenario Normal", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{}, nil)
+		userRepoMock.On("FindByEmail", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{}, nil)
+		userRepoMock.On("Create", ctx, mock.Anything).Once().Return(model.UserAuth{}, nil)
+
+		req := &pb.RegisterDto{
+			Username: "usertest",
+			Email:    "test@test.mail",
+			Phone:    "1234567890",
+			Password: "123",
+		}
+		_, err := userService.Register(ctx, req)
+		assert.Empty(t, err)
+	})
+
+	t.Run("Scenario Blocker Username", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{Username: "usertest"}, nil)
+
+		req := &pb.RegisterDto{
+			Username: "usertest",
+			Email:    "test@test.mail",
+			Phone:    "1234567890",
+			Password: "123",
+		}
+		_, err := userService.Register(ctx, req)
+		assert.NotEmpty(t, err)
+	})
+
+	t.Run("Scenario Blocker Email", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{}, nil)
+		userRepoMock.On("FindByEmail", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{Email: "test@test.mail"}, nil)
+
+		req := &pb.RegisterDto{
+			Username: "usertest",
+			Email:    "test@test.mail",
+			Phone:    "1234567890",
+			Password: "123",
+		}
+		_, err := userService.Register(ctx, req)
+		assert.NotEmpty(t, err)
+	})
 }
 
 func TestService_Login(t *testing.T) {
-	repository := UserRepositoryMock{}
-	repository.On("FindByUsername").Return(model.UserAuth{}, nil)
-	repository.On("FindTokenByUserAndDevice").Return(model.UserAuth{}, nil)
+	t.Run("Scenario Normal", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(
+			model.UserAuth{
+				Password: "$2a$12$jCaKCFEl723czhZmc7fDEeU8CezXZ.Qmram4G5IGrJf/enmEDjzSC",
+				Status:   "active",
+			},
+			nil,
+		)
+		userRepoMock.On("FindTokenByUserAndDevice", ctx, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(
+			model.UserToken{
+				ExpiredDt: &time.Time{},
+			},
+			nil,
+		)
+		userRepoMock.On("DeleteTokenByUserAndDevice", ctx, mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(true, nil)
+		userRepoMock.On("CreateToken", ctx, mock.Anything).Return(
+			model.UserToken{
+				ExpiredDt: &time.Time{},
+			},
+			nil,
+		)
 
-	ctx := context.Background()
+		req := &pb.LoginDto{
+			Username: "usertest",
+			Password: "123",
+			DeviceId: "123",
+		}
+		_, err := userService.Login(ctx, req)
+		assert.Empty(t, err)
+	})
 
-	service := AuthSvc{repository, logrus.StandardLogger()}
-	req := &pb.LoginDto{
-		Username: "test",
-		Password: "123",
-		DeviceId: "123",
-	}
-	users, _ := service.Login(ctx, req)
-	assert.Equal(t, users.Username, "test")
-}
+	t.Run("Scenario Blocker Username Empty", func(t *testing.T) {
+		req := &pb.LoginDto{Username: ""}
+		_, err := userService.Login(ctx, req)
+		assert.NotEmpty(t, err)
+	})
 
-func TestService_Register(t *testing.T) {
-	repository := UserRepositoryMock{}
-	repository.On("FindByUsername").Return(model.UserAuth{}, nil)
-	repository.On("FindByEmail").Return(model.UserAuth{}, nil)
-	repository.On("Create").Return(model.UserAuth{}, nil)
+	t.Run("Scenario Blocker Invalid Username", func(t *testing.T) {
+		req := &pb.LoginDto{Username: "+_)"}
+		_, err := userService.Login(ctx, req)
+		assert.NotEmpty(t, err)
+	})
 
-	ctx := context.Background()
+	t.Run("Scenario Blocker DeviceID Empty", func(t *testing.T) {
+		req := &pb.LoginDto{
+			Username: "usertest",
+			DeviceId: "",
+		}
+		_, err := userService.Login(ctx, req)
+		assert.NotEmpty(t, err)
+	})
 
-	service := AuthSvc{repository, logrus.StandardLogger()}
-	req := &pb.RegisterDto{
-		Username: "test2",
-		Email:    "test2@test.com",
-		Phone:    "123",
-		Password: "123",
-	}
-	users, _ := service.Register(ctx, req)
-	assert.Equal(t, users.Username, "test2")
-	assert.Equal(t, users.Email, "test2@test.com")
+	t.Run("Scenario Username Not Found", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{}, mongo.ErrNoDocuments)
+
+		req := &pb.LoginDto{
+			Username: "usertest",
+			Password: "123",
+			DeviceId: "123",
+		}
+		_, err := userService.Login(ctx, req)
+		assert.NotEmpty(t, err)
+	})
+
+	t.Run("Scenario Invalid Password", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(model.UserAuth{}, nil)
+
+		req := &pb.LoginDto{
+			Username: "usertest",
+			Password: "123",
+			DeviceId: "123",
+		}
+		_, err := userService.Login(ctx, req)
+		assert.NotEmpty(t, err)
+	})
+
+	t.Run("Scenario Username Not Active", func(t *testing.T) {
+		userRepoMock.On("FindByUsername", ctx, mock.AnythingOfType("string")).Once().Return(
+			model.UserAuth{Password: "$2a$12$jCaKCFEl723czhZmc7fDEeU8CezXZ.Qmram4G5IGrJf/enmEDjzSC"},
+			nil,
+		)
+
+		req := &pb.LoginDto{
+			Username: "usertest",
+			Password: "123",
+			DeviceId: "123",
+		}
+		_, err := userService.Login(ctx, req)
+		assert.NotEmpty(t, err)
+	})
 }
