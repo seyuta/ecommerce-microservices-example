@@ -1,4 +1,7 @@
-## ecommerce-microservices-example
+## Ecommerce Microservices Example
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/seyuta/ecommerce-microservices-example)](https://goreportcard.com/report/github.com/seyuta/ecommerce-microservices-example)
+
 Is a microservice for simple e-commerce, solutions stack with:
 1. [Golang](https://go.dev/)
 2. [MongoDB](https://www.mongodb.com/)
